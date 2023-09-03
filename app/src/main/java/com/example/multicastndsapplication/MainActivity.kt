@@ -6,6 +6,9 @@ import androidx.activity.viewModels
 import com.example.multicastndsapplication.databinding.ActivityMainBinding
 import dagger.hilt.android.AndroidEntryPoint
 
+/**
+ * This is the main basic activity to initiate the mDNS services
+ */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private lateinit var mainActivityBinding: ActivityMainBinding
