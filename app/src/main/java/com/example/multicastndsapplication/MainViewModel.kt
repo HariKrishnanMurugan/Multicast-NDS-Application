@@ -5,12 +5,11 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * The view model class for publish, Scan mDNS services and connect with them. It handles the business logic to communicate with the
+ * The view model class for publish, Scan mDNS services. It handles the business logic to communicate with the
  * services and provides the data to the observing UI component.
  */
 @HiltViewModel
@@ -34,11 +33,23 @@ open class MainViewModel @Inject constructor(private val repo: Repository) : Vie
         }
     }
 
+    /**
+     * To scan the published devices
+     */
     fun scanDevices() {
         viewModelScope.launch {
             repo.scanmDNSService(serviceList).collect{
                 scanResult.value = it
             }
+        }
+    }
+
+    /**
+     * To stop the listener
+     */
+    fun tearDownListener() {
+        viewModelScope.launch {
+            repo.stopListener()
         }
     }
 }

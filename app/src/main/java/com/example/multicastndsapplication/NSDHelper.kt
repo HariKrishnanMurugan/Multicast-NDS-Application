@@ -1,5 +1,10 @@
 package com.example.multicastndsapplication
 
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothManager
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
@@ -19,6 +24,10 @@ class NSDHelper @Inject constructor(@ApplicationContext private val context: Con
     private var registrationListener: NsdManager.RegistrationListener? = null
     private var discoveryListener: NsdManager.DiscoveryListener? = null
     private var resolveListener: NsdManager.ResolveListener? = null
+    private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+    private val bluetoothAdapter = bluetoothManager.adapter
+    private val bluetoothLeScanner by lazy { bluetoothAdapter.bluetoothLeScanner }
+    private var scanCallback: ScanCallback? = null
 
     companion object {
         private const val SERVICE_NAME = "MyService001"
@@ -71,6 +80,7 @@ class NSDHelper @Inject constructor(@ApplicationContext private val context: Con
      * To discover the service
      *
      * @param serviceList The service model list
+     * @return The service result
      */
     fun discoverServices(serviceList: MutableList<ServiceModel>): Flow<ServiceResult> {
         return callbackFlow {
@@ -146,7 +156,7 @@ class NSDHelper @Inject constructor(@ApplicationContext private val context: Con
     /**
      * To tear down the NSD method
      */
-    private fun tearDown() {
+    fun tearDown() {
         nsdManager.apply {
             registrationListener?.let {
                 unregisterService(registrationListener)
@@ -158,5 +168,42 @@ class NSDHelper @Inject constructor(@ApplicationContext private val context: Con
                 discoveryListener = null
             }
         }
+    }
+
+    /**
+     * To scan te BLE devices
+     *
+     * @return The BLE results
+     */
+    @SuppressLint("MissingPermission")
+    fun scanBleDevices(): Flow<ServiceResult> {
+        return callbackFlow {
+            scanCallback = object : ScanCallback() {
+                override fun onScanResult(callbackType: Int, result: ScanResult?) {
+                    // Handle the discovered Bluetooth device
+                    trySend(ServiceResult.Success(result))
+                    close()
+                }
+
+                override fun onBatchScanResults(results: List<ScanResult?>?) {
+                    // No need to handle
+                }
+
+                override fun onScanFailed(errorCode: Int) {
+                    trySend(ServiceResult.Error("", "Scan Failed"))
+                    close()
+                }
+            }
+            bluetoothLeScanner?.startScan(scanCallback)
+            awaitClose()
+        }
+    }
+
+    /**
+     * To stop the BLE scan
+     */
+    @SuppressLint("MissingPermission")
+    fun stopScan() {
+        bluetoothLeScanner?.stopScan(scanCallback)
     }
 }

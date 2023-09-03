@@ -4,4 +4,12 @@
     <string name="scan">Scan</string>
     <string name="find_ble">Find BLE</string>
     <string name="no_results">No Results</string>
+    <string name="gps_successfully_enables">Successfully Enabled Your Device GPS !…</string>
+    <string name="try_again">Try Again</string>
+    <string name="allow">Allow</string>
+    <string name="deny">Deny</string>
+    <string name="need_location_permission">Location Permission is Needed in Order to Use Further</string>
+    <string name="need_bluetooth_permission">Bluetooth Permission is Needed in Order to Use Further</string>
+    <string name="app_permission_rationale">Required Permissions to Perform Better</string>
+    <string name="scanning">Scanning Please Wait…</string>
 </resources>

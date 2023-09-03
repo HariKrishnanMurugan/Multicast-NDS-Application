@@ -58,6 +58,12 @@ dependencies {
 
     // Gson
     implementation 'com.google.code.gson:gson:2.10.1'
+
+    // Permission Dispatcher
+    implementation "com.github.permissions-dispatcher:ktx:1.1.4"
+
+    // Location
+    implementation "com.google.android.gms:play-services-location:21.0.1"
 }
 
 kapt {
