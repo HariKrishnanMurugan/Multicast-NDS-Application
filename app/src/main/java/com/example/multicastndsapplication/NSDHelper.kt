@@ -5,12 +5,9 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import javax.inject.Inject
 
 /**
@@ -79,12 +76,4 @@ class NSDHelper @Inject constructor(@ApplicationContext private val context: Con
             }
         }
     }
-}
-
-/**
- * The callback for communication between the helper class and repository
- */
-interface RegistrationResultCallback {
-    suspend fun onSuccess()
-    suspend fun onFailure()
 }
