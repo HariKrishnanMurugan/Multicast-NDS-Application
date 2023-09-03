@@ -8,6 +8,7 @@ import com.example.multicastndsapplication.ServiceResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -21,6 +22,8 @@ class FindBleDevicesViewModel @Inject constructor(private val repo: Repository) 
     val scanResult = result.asStateFlow()
     var scannedDevicesList = mutableListOf<DeviceDetails>()
     var distinctList: MutableList<DeviceDetails>? = null
+    private val pairResult = MutableStateFlow<ServiceResult?>(null)
+    val pairResultFlow = pairResult.asStateFlow()
 
     /**
      * To scan the nearby BLE devices
@@ -45,9 +48,15 @@ class FindBleDevicesViewModel @Inject constructor(private val repo: Repository) 
 
     /**
      * To connect the selected BLE device
+     *
+     * @param deviceData The selected device details
      */
-    fun connectBLEDevice() {
-
+    fun connectBLEDevice(deviceData: DeviceDetails) {
+        viewModelScope.launch {
+            repo.pairBLEDevices(deviceData).collect {
+                pairResult.value = it
+            }
+        }
     }
 
     /**

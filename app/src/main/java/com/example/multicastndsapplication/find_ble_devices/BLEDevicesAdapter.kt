@@ -13,7 +13,8 @@ import com.example.multicastndsapplication.databinding.LayoutBleDevicesBinding
  *
  * @param deviceList The bluetooth devices info
  */
-class BLEDevicesAdapter(private val deviceList: MutableList<DeviceDetails>) : RecyclerView.Adapter<BLEDevicesAdapter.BLEDevicesViewHolder>() {
+class BLEDevicesAdapter(private val deviceList: MutableList<DeviceDetails>, private val deviceConnectCallback: BLEDeviceConnectCallback) :
+    RecyclerView.Adapter<BLEDevicesAdapter.BLEDevicesViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BLEDevicesViewHolder {
         return BLEDevicesViewHolder(LayoutBleDevicesBinding.inflate(LayoutInflater.from(parent.context), parent, false))
@@ -44,6 +45,9 @@ class BLEDevicesAdapter(private val deviceList: MutableList<DeviceDetails>) : Re
                 tvDeviceName.text = deviceDetail.bluetoothDeviceInfo.name
                 tvDeviceAddress.text = deviceDetail.bluetoothDeviceInfo.address
                 viewSeparator.isVisible = adapterPosition != deviceList.size - 1
+                root.setOnClickListener {
+                    deviceConnectCallback.onDeviceClicked(deviceDetail)
+                }
             }
         }
     }

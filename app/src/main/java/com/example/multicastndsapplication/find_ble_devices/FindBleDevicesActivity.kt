@@ -14,13 +14,14 @@ import com.example.multicastndsapplication.R
 import com.example.multicastndsapplication.ServiceResult
 import com.example.multicastndsapplication.databinding.ActivityFindBleDevicesBinding
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 /**
  * The Fragment class represents to find the nearby ble devices and try to pair with them
  */
 @AndroidEntryPoint
-class FindBleDevicesActivity : AppCompatActivity() {
+class FindBleDevicesActivity : AppCompatActivity(), BLEDeviceConnectCallback {
     private lateinit var findBleDevicesBinding: ActivityFindBleDevicesBinding
     private val findBleViewModel: FindBleDevicesViewModel by viewModels()
 
@@ -37,6 +38,15 @@ class FindBleDevicesActivity : AppCompatActivity() {
         observeViewModel()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        stopScan()
+    }
+
+    override fun onDeviceClicked(deviceData: DeviceDetails) {
+        findBleViewModel.connectBLEDevice(deviceData)
+    }
+
     /**
      * To start the scan
      */
@@ -45,11 +55,9 @@ class FindBleDevicesActivity : AppCompatActivity() {
             findBleViewModel.scanBLEDevices()
             Handler(Looper.getMainLooper()).postDelayed(
                 {
-                    stopBLEDeviceScan()
-                    val list = findBleViewModel.distinctList
-                    showEmptyView(!(list != null && list.isNotEmpty()))
+                    stopScan()
                 },
-                5000
+                10000
             )
             showToast(getString(R.string.scanning))
         }
@@ -59,22 +67,41 @@ class FindBleDevicesActivity : AppCompatActivity() {
      * To observe view model
      */
     private fun observeViewModel() {
-        lifecycleScope.launch {
-            findBleViewModel.scanResult.collect { result ->
-                when (result) {
-                    is ServiceResult.Success<*> -> {
-                        with(findBleViewModel) {
-                            val resultData = result.data as ScanResult
-                            distinctList(resultData)
+        with(findBleViewModel) {
+            lifecycleScope.launch {
+                scanResult.collect { result ->
+                    when (result) {
+                        is ServiceResult.Success<*> -> {
+                            with(findBleViewModel) {
+                                val resultData = result.data as ScanResult
+                                distinctList(resultData)
+                            }
+                            setAdapter()
                         }
-                        setAdapter()
-                    }
 
-                    is ServiceResult.Error -> {
-                        showToast("${result.serviceName} is unable to register due to this ${result.errorMessage}")
+                        is ServiceResult.Error -> {
+                            showToast("${result.serviceName} is unable to register due to this ${result.errorMessage}")
+                        }
+                        else -> {
+                            // No need to handle
+                        }
                     }
-                    else -> {
-                        // No need to handle
+                }
+            }
+
+            lifecycleScope.launch {
+                pairResultFlow.collect { result ->
+                    when (result) {
+                        is ServiceResult.Success<*> -> {
+                            showToast("${result.data}")
+                        }
+
+                        is ServiceResult.Error -> {
+                            showToast("${result.serviceName} is unable to register due to this ${result.errorMessage}")
+                        }
+                        else -> {
+                            // No need to handle
+                        }
                     }
                 }
             }
@@ -90,12 +117,23 @@ class FindBleDevicesActivity : AppCompatActivity() {
             val isValidList = deviceList != null && deviceList.isNotEmpty()
             showEmptyView(!isValidList)
             if (isValidList) {
-                val bleDeviceAdapter = BLEDevicesAdapter(deviceList!!)
+                val bleDeviceAdapter = BLEDevicesAdapter(deviceList!!, this@FindBleDevicesActivity)
                 rvBleDevices.apply {
                     layoutManager = LinearLayoutManager(this@FindBleDevicesActivity)
                     adapter = bleDeviceAdapter
                 }
             }
+        }
+    }
+
+    /**
+     * To stop the scan
+     */
+    private fun stopScan() {
+        with(findBleViewModel) {
+            stopBLEDeviceScan()
+            val list = findBleViewModel.distinctList
+            showEmptyView(!(list != null && list.isNotEmpty()))
         }
     }
 
