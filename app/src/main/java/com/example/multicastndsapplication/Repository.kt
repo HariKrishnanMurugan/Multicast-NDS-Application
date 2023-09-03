@@ -26,9 +26,11 @@ class Repository @Inject constructor(private val nsdHelper: NSDHelper) {
 
     /**
      * To scan the mDNS services
+     *
+     * @param serviceList The service model list
      */
-    fun scanmDNSService() {
-        TODO("Not yet implemented")
+    fun scanmDNSService(serviceList: MutableList<ServiceModel>): Flow<ServiceResult> {
+        return flow { emitAll(nsdHelper.discoverServices(serviceList)) }
     }
 
     /**
