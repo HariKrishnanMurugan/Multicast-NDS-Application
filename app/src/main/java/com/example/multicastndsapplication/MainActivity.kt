@@ -1,11 +1,15 @@
 package com.example.multicastndsapplication
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.core.os.bundleOf
 import androidx.lifecycle.lifecycleScope
 import com.example.multicastndsapplication.databinding.ActivityMainBinding
+import com.google.gson.Gson
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -51,7 +55,30 @@ class MainActivity : AppCompatActivity() {
             }
 
             btnScan.setOnClickListener {
-                TODO("Not yet implemented")
+                lifecycleScope.launch {
+                    mainViewModel.scanResults.collect { result ->
+                        when (result) {
+                            is ServiceResult.Success<*> -> {
+                                mainViewModel.serviceList = result.data as MutableList<ServiceModel>
+                                if (mainViewModel.serviceList.isNotEmpty()) {
+                                    startActivity(
+                                        Intent(this@MainActivity, ServiceActivity::class.java).putExtras(
+                                            bundleOf("ScreenName" to "scan_screen", "ServiceList" to Gson().toJson(mainViewModel.serviceList))
+                                        )
+                                    )
+                                } else showToast("No Devices are available now")
+                            }
+
+                            is ServiceResult.Error -> {
+                                showToast("${result.serviceName} is unable to scan due to this ${result.errorMessage}")
+                            }
+                            else -> {
+                                // No need to handle
+                            }
+                        }
+                    }
+                }
+                mainViewModel.scanDevices()
             }
 
             btnFindBle.setOnClickListener {

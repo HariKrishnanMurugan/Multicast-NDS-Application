@@ -15,11 +15,14 @@ import javax.inject.Inject
  */
 class NSDHelper @Inject constructor(@ApplicationContext private val context: Context) {
     private val TAG: String = this::class.java.simpleName
-    private lateinit var nsdManager: NsdManager
+    private val nsdManager: NsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
     private var registrationListener: NsdManager.RegistrationListener? = null
+    private var discoveryListener: NsdManager.DiscoveryListener? = null
+    private var resolveListener: NsdManager.ResolveListener? = null
 
     companion object {
         private const val SERVICE_NAME = "MyService001"
+        private const val SERVICE_NAME2 = "MyService002"
         private const val SERVICE_TYPE = "_http._tcp."
     }
 
@@ -59,9 +62,83 @@ class NSDHelper @Inject constructor(@ApplicationContext private val context: Con
                 serviceType = SERVICE_TYPE
                 port = portValue
             }
-            nsdManager = (context.getSystemService(Context.NSD_SERVICE) as NsdManager).apply {
-                registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
+            nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
+            awaitClose()
+        }
+    }
+
+    /**
+     * To discover the service
+     *
+     * @param serviceList The service model list
+     */
+    fun discoverServices(serviceList: MutableList<ServiceModel>): Flow<ServiceResult> {
+        return callbackFlow {
+            tearDown()
+            resolveListener = object : NsdManager.ResolveListener {
+                override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+                    // Called when the resolve fails. Use the error code to debug.
+                    trySend(ServiceResult.Error(serviceInfo.serviceName, "Resolve Failed"))
+                    close()
+                }
+
+                override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+
+                    if (SERVICE_NAME2 == serviceInfo.serviceName) {
+                        trySend(ServiceResult.Error(serviceInfo.serviceName, "Same IP"))
+                        close()
+                        return
+                    }
+
+                    with(serviceInfo) {
+                        serviceList.add(ServiceModel(serviceName, serviceType, host.toString(), port.toString()))
+                    }
+
+                    trySend(ServiceResult.Success(serviceList))
+                    close()
+                }
             }
+            val discoveryListener = object : NsdManager.DiscoveryListener {
+                // Called as soon as service discovery begins.
+                override fun onDiscoveryStarted(regType: String) {
+                    Log.d(TAG, "Service discovery started")
+                }
+
+                override fun onServiceFound(service: NsdServiceInfo) {
+                    // A service was found! Do something with it.
+                    val serviceName = service.serviceName
+                    when {
+                        service.serviceType != SERVICE_TYPE -> // Service type is the string containing the protocol and transport layer for this service.
+                            Log.d(TAG, "Unknown Service Type: ${service.serviceType}")
+                        SERVICE_NAME2 == serviceName -> // The name of the service tells the user what they'd be connecting to.
+                            Log.d(TAG, "Same machine: $serviceName")
+
+                        service.serviceName.contains(SERVICE_NAME) -> nsdManager.resolveService(service, resolveListener)
+                    }
+                }
+
+                override fun onServiceLost(service: NsdServiceInfo) {
+                    // When the network service is no longer available.
+                    // Internal bookkeeping code goes here.
+                    trySend(ServiceResult.Error(service.serviceName, "Service Lost"))
+                    close()
+                }
+
+                override fun onDiscoveryStopped(serviceType: String) {
+                    Log.d(TAG, "Discovery stopped: $serviceType")
+                }
+
+                override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
+                    Log.e(TAG, "Discovery failed: Error code:$errorCode")
+                    nsdManager.stopServiceDiscovery(this)
+                }
+
+                override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
+                    Log.e(TAG, "Discovery failed: Error code:$errorCode")
+                    nsdManager.stopServiceDiscovery(this)
+                }
+            }
+            nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
             awaitClose()
         }
     }
@@ -70,9 +147,15 @@ class NSDHelper @Inject constructor(@ApplicationContext private val context: Con
      * To tear down the NSD method
      */
     private fun tearDown() {
-        if (::nsdManager.isInitialized) {
-            nsdManager.apply {
+        nsdManager.apply {
+            registrationListener?.let {
                 unregisterService(registrationListener)
+                registrationListener = null
+            }
+            discoveryListener?.let {
+                stopServiceDiscovery(discoveryListener)
+                resolveListener = null
+                discoveryListener = null
             }
         }
     }
