@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.example.multicastndsapplication.databinding.ActivityServiceBinding
-import com.example.multicastndsapplication.find_ble_devices.FindBleDevicesFragment
+import com.example.multicastndsapplication.find_ble_devices.FindBleDevicesActivity
 import com.example.multicastndsapplication.scan_mdns_service.ScanmDNSServiceFragment
 
 /**
@@ -27,11 +27,7 @@ class ServiceActivity : AppCompatActivity() {
      * @param bundle The bundle data
      */
     private fun loadFragment(bundle: Bundle?) {
-        val fragmentToReplace = when (bundle?.getString("ScreenName")) {
-            "scan_screen" -> ScanmDNSServiceFragment.newInstance(bundle)
-            else -> FindBleDevicesFragment.newInstance()
-        }
-        replaceFragment(fragmentToReplace)
+        replaceFragment(ScanmDNSServiceFragment.newInstance(bundle))
     }
 
     /**
